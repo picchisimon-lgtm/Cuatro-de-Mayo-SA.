@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuatro de Mayo</title>
+
+<!--
+  ============================================================
+  CUATRO DE MAYO - Página de inicio (esqueleto del sitio)
+  ============================================================
+  Esta es la página principal. Muestra los rubros y secciones.
+  El equipo entra acá, elige rubro (clic 1) y sección (clic 2).
+
+  CÓMO AGREGAR UNA SECCIÓN NUEVA EN EL FUTURO:
+  Buscá más abajo la sección "MAPA DEL SITIO" (está marcada bien
+  claro). Es una lista. Para activar una sección nueva, solo se
+  cambia su "estado" a "listo" y se le pone el nombre del archivo.
+  No hace falta tocar nada más.
+
+  CÓMO CAMBIAR USUARIO Y CONTRASEÑA:
+  Buscá la sección "CONFIGURACIÓN DE ACCESO".
+  ============================================================
+-->
+
+<style>
+  :root {
+    --verde-osc:   #27500A;
+    --verde-med:   #639922;
+    --verde-claro: #EAF3DE;
+    --verde-borde: #C0DD97;
+    --gris-texto:  #444441;
+    --gris-suave:  #6B6B66;
+    --gris-linea:  #E2E1DA;
+    --gris-fondo:  #F4F4F0;
+    --blanco:      #FFFFFF;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: var(--gris-fondo);
+    color: var(--gris-texto);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ----- Pantalla de acceso ----- */
+  #login {
+    position: fixed; inset: 0;
+    background: var(--verde-osc);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; padding: 20px;
+  }
+  #login .caja {
+    background: var(--blanco); border-radius: 14px;
+    padding: 36px 32px; width: 100%; max-width: 360px; text-align: center;
+  }
+  #login h1 { color: var(--verde-osc); font-size: 22px; margin-bottom: 4px; }
+  #login p.sub { color: var(--gris-suave); font-size: 13px; margin-bottom: 22px; }
+  #login label {
+    display: block; text-align: left; font-size: 13px;
+    color: var(--verde-osc); font-weight: 600; margin: 12px 0 4px;
+  }
+  #login input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--gris-linea);
+    border-radius: 8px; font-size: 15px;
+  }
+  #login input:focus { outline: 2px solid var(--verde-borde); border-color: var(--verde-med); }
+  #login button {
+    width: 100%; margin-top: 20px; padding: 11px;
+    background: var(--verde-med); color: var(--blanco);
+    border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  #login button:hover { background: var(--verde-osc); }
+  #login .error { color: #A32D2D; font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+  /* ----- Aplicación ----- */
+  #app { display: none; }
+
+  /* Encabezado con nombre de la empresa */
+  .cabecera {
+    background: var(--verde-osc); color: var(--blanco);
+    padding: 18px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cabecera .marca { font-size: 20px; font-weight: 700; letter-spacing: 0.3px; }
+  .cabecera .btn-salir {
+    background: none; border: 1px solid rgba(255,255,255,.4);
+    color: var(--blanco); font-size: 13px; padding: 6px 14px;
+    border-radius: 8px; cursor: pointer;
+  }
+  .cabecera .btn-salir:hover { background: rgba(255,255,255,.12); }
+
+  .contenido {
+    max-width: 1000px; margin: 0 auto; padding: 26px 20px;
+  }
+
+  /* Migas de navegación (dónde estoy) */
+  .migas {
+    font-size: 13px; color: var(--gris-suave); margin-bottom: 18px;
+  }
+  .migas a { color: var(--verde-med); cursor: pointer; text-decoration: none; }
+  .migas a:hover { text-decoration: underline; }
+  .migas .sep { margin: 0 6px; color: var(--gris-linea); }
+
+  /* Barra de rubros (siempre visible) */
+  .rubros {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px;
+  }
+  .btn-rubro {
+    flex: 1; min-width: 130px;
+    padding: 12px 14px;
+    background: var(--blanco); border: 1px solid var(--gris-linea);
+    border-radius: 10px; font-size: 15px; color: var(--gris-texto);
+    cursor: pointer; text-align: center; transition: background .12s;
+  }
+  .btn-rubro:hover { background: var(--verde-claro); }
+  .btn-rubro.activo {
+    background: var(--verde-med); border-color: var(--verde-osc);
+    color: var(--blanco); font-weight: 600;
+  }
+
+  /* Título del rubro elegido */
+  .titulo-rubro {
+    font-size: 15px; color: var(--verde-osc); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+
+  /* Tarjetas de secciones */
+  .secciones {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .tarjeta {
+    background: var(--blanco); border: 1px solid var(--gris-linea);
+    border-radius: 12px; padding: 18px 16px;
+    text-align: left; cursor: pointer; transition: border-color .12s, background .12s;
+  }
+  .tarjeta.disponible:hover {
+    border-color: var(--verde-med); background: var(--verde-claro);
+  }
+  .tarjeta .nombre-seccion {
+    font-size: 16px; font-weight: 600; color: var(--verde-osc);
+    margin-bottom: 6px;
+  }
+  .tarjeta .estado { font-size: 12px; }
+  .tarjeta .estado.listo { color: var(--verde-med); font-weight: 600; }
+  .tarjeta .estado.proximo { color: var(--gris-suave); }
+  .tarjeta.proximamente { cursor: default; opacity: 0.7; }
+
+  .aviso-vacio {
+    background: var(--blanco); border: 1px dashed var(--gris-linea);
+    border-radius: 12px; padding: 28px; text-align: center;
+    color: var(--gris-suave); font-size: 14px;
+  }
+
+  .pie {
+    text-align: center; font-size: 12px; color: var(--gris-suave);
+    padding: 20px; margin-top: 10px;
+  }
+
+  @media (max-width: 600px) {
+    .btn-rubro { min-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== PANTALLA DE ACCESO ===================== -->
+<div id="login">
+  <div class="caja">
+    <h1>Cuatro de Mayo</h1>
+    <p class="sub">Ingresá para ver la información</p>
+    <label for="in-user">Usuario</label>
+    <input type="text" id="in-user" autocomplete="off">
+    <label for="in-pass">Contraseña</label>
+    <input type="password" id="in-pass">
+    <button id="btn-entrar">Entrar</button>
+    <div class="error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ===================== APLICACIÓN ===================== -->
+<div id="app">
+  <div class="cabecera">
+    <span class="marca">Cuatro de Mayo</span>
+    <button class="btn-salir" id="btn-salir">Salir</button>
+  </div>
+
+  <div class="contenido">
+    <div class="migas" id="migas"></div>
+
+    <div class="rubros" id="barra-rubros"><!-- botones generados por JS --></div>
+
+    <div class="titulo-rubro" id="titulo-rubro"></div>
+    <div class="secciones" id="lista-secciones"><!-- tarjetas generadas por JS --></div>
+  </div>
+
+  <div class="pie">Cuatro de Mayo · información de gestión agropecuaria</div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIGURACIÓN DE ACCESO  (usuario y contraseña)
+   ----------------------------------------------------------------
+   Barrera liviana, no seguridad real. Cambiá los dos textos.
+   ================================================================ */
+var USUARIO_OK    = "equipo";
+var CONTRASENA_OK = "cuatrodemayo2025";
+
+
+/* ================================================================
+   MAPA DEL SITIO
+   ----------------------------------------------------------------
+   Esta es la estructura del sitio. Para CADA sección:
+     - nombre:  el texto que se ve en la tarjeta
+     - estado:  "listo"  -> la sección se puede abrir
+                "proximo" -> muestra "Próximamente", no se abre
+     - archivo: el nombre del archivo HTML de esa sección
+                (solo importa si el estado es "listo")
+
+   PARA ACTIVAR UNA SECCIÓN NUEVA EN EL FUTURO:
+     1. Creá su archivo (ej: "costos.html").
+     2. Acá abajo, cambiá su "estado" de "proximo" a "listo".
+     3. Verificá que "archivo" tenga el nombre correcto.
+   No hace falta tocar nada más.
+   ================================================================ */
+var MAPA = [
+  {
+    rubro: "Empresa",
+    secciones: [
+      { nombre: "Resumen general", estado: "proximo", archivo: "" }
+    ]
+  },
+  {
+    rubro: "Agricultura",
+    secciones: [
+      { nombre: "Rindes",  estado: "listo",   archivo: "rindes.html" },
+      { nombre: "Costos",  estado: "proximo", archivo: "costos.html" },
+      { nombre: "Stock",   estado: "proximo", archivo: "stock.html" },
+      { nombre: "Remitos", estado: "proximo", archivo: "remitos.html" }
+    ]
+  },
+  {
+    rubro: "Ganadería",
+    secciones: [
+      { nombre: "Resumen general", estado: "proximo", archivo: "" }
+    ]
+  }
+];
+
+
+/* ================================================================
+   DE ACÁ PARA ABAJO NO HACE FALTA TOCAR NADA
+   ================================================================ */
+
+/* ---------- Pantalla de acceso ---------- */
+function intentarEntrar() {
+  var u = document.getElementById("in-user").value.trim();
+  var p = document.getElementById("in-pass").value;
+  if (u === USUARIO_OK && p === CONTRASENA_OK) {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    iniciar();
+  } else {
+    document.getElementById("login-error").textContent =
+      "Usuario o contraseña incorrectos.";
+  }
+}
+document.getElementById("btn-entrar").addEventListener("click", intentarEntrar);
+document.getElementById("in-pass").addEventListener("keydown", function(e){
+  if (e.key === "Enter") intentarEntrar();
+});
+document.getElementById("btn-salir").addEventListener("click", function(){
+  location.reload();
+});
+
+
+/* ---------- Estado de navegación ---------- */
+var rubroActivo = 0;   // índice del rubro elegido dentro de MAPA
+
+function iniciar() {
+  armarBarraRubros();
+  mostrarRubro(0);
+}
+
+/* Dibuja los botones de rubro (Empresa / Agricultura / Ganadería) */
+function armarBarraRubros() {
+  var barra = document.getElementById("barra-rubros");
+  barra.innerHTML = "";
+  MAPA.forEach(function(r, i){
+    var b = document.createElement("button");
+    b.className = "btn-rubro";
+    b.textContent = r.rubro;
+    b.addEventListener("click", function(){ mostrarRubro(i); });
+    barra.appendChild(b);
+  });
+}
+
+/* Muestra las secciones del rubro elegido */
+function mostrarRubro(indice) {
+  rubroActivo = indice;
+  var rubro = MAPA[indice];
+
+  // marcar el botón activo
+  var botones = document.querySelectorAll(".btn-rubro");
+  botones.forEach(function(b, i){
+    b.classList.toggle("activo", i === indice);
+  });
+
+  // migas de navegación
+  document.getElementById("migas").innerHTML =
+    '<a id="ir-inicio">Cuatro de Mayo</a>' +
+    '<span class="sep">/</span>' + rubro.rubro;
+  document.getElementById("ir-inicio").addEventListener("click", function(){
+    mostrarRubro(0);
+  });
+
+  // título del rubro
+  document.getElementById("titulo-rubro").textContent = rubro.rubro;
+
+  // tarjetas de secciones
+  var cont = document.getElementById("lista-secciones");
+  cont.innerHTML = "";
+
+  if (!rubro.secciones || rubro.secciones.length === 0) {
+    cont.innerHTML = '<div class="aviso-vacio">Este rubro todavía no tiene secciones.</div>';
+    return;
+  }
+
+  rubro.secciones.forEach(function(s){
+    var t = document.createElement("div");
+    var disponible = (s.estado === "listo");
+    t.className = "tarjeta " + (disponible ? "disponible" : "proximamente");
+
+    var estadoTxt = disponible
+      ? '<span class="estado listo">Disponible</span>'
+      : '<span class="estado proximo">Próximamente</span>';
+    t.innerHTML = '<div class="nombre-seccion">' + s.nombre + '</div>' + estadoTxt;
+
+    if (disponible && s.archivo) {
+      t.addEventListener("click", function(){
+        window.location.href = s.archivo;
+      });
+    }
+    cont.appendChild(t);
+  });
+}
+</script>
+
+</body>
+</html>
