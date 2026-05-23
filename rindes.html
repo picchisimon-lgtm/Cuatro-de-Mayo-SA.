@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rindes de cultivos</title>
+
+<!--
+  ============================================================
+  RINDES DE CULTIVOS - Visualizador web
+  ============================================================
+  Este archivo NO contiene los datos. Los datos viven en el
+  archivo "datos.csv" que está al lado de este archivo.
+
+  PARA ACTUALIZAR LOS DATOS:
+  No se toca este archivo. Solo se reemplaza "datos.csv".
+  (Ver el instructivo aparte para los pasos.)
+
+  PARA CAMBIAR EL USUARIO Y LA CONTRASEÑA:
+  Buscar más abajo la sección "CONFIGURACIÓN DE ACCESO"
+  (está marcada bien claro) y cambiar los dos textos.
+
+  PARA CAMBIAR LA FECHA DE ÚLTIMA ACTUALIZACIÓN:
+  Buscar la sección "CONFIGURACIÓN GENERAL" y editar la fecha.
+  ============================================================
+-->
+
+<style>
+  /* ----- Paleta verde hierba / blanco / gris ----- */
+  :root {
+    --verde-osc:   #2E5D0C;   /* cabecera, encabezado de tabla */
+    --verde-med:   #8FD13F;   /* titulos y detalles sobre negro */
+    --verde-claro: #B6E87A;   /* acentos claros */
+    --verde-borde: #3E7416;   /* bordes verdosos */
+    --gris-texto:  #ECECE9;   /* texto principal claro */
+    --gris-suave:  #A8A8A2;   /* texto secundario */
+    --gris-linea:  #3A3A38;   /* líneas de tabla */
+    --gris-fondo:  #121211;   /* fondo negro suave */
+    --panel:       #1E1E1C;   /* fondo de paneles/tarjetas */
+    --panel-claro: #292927;   /* fondo de recuadros e indicadores */
+    --blanco:      #1E1E1C;   /* (sustituto: ya no se usa blanco puro) */
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background: var(--gris-fondo);
+    color: var(--gris-texto);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============================================================
+     APLICACIÓN
+     ============================================================ */
+
+  .contenedor {
+    display: flex;
+    gap: 18px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    align-items: flex-start;
+  }
+
+  /* ----- Barra lateral de filtros ----- */
+  .lateral {
+    flex: 0 0 250px;
+    background: var(--panel);
+    border: 1px solid var(--gris-linea);
+    border-radius: 14px;
+    padding: 20px 18px;
+  }
+  .lateral .titulo-filtro {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--verde-med);
+    margin-bottom: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .lateral .grupo { margin-bottom: 24px; }
+  .lateral .grupo:last-child { margin-bottom: 0; }
+
+  /* Botones de campaña */
+  .btn-campana {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 12px 14px;
+    margin-bottom: 7px;
+    background: var(--panel-claro);
+    border: 1px solid var(--gris-linea);
+    border-radius: 8px;
+    font-size: 16px;
+    color: var(--gris-texto);
+    cursor: pointer;
+    transition: background .12s;
+  }
+  .btn-campana:hover { background: var(--verde-osc); }
+  .btn-campana.activo {
+    background: var(--verde-med);
+    border-color: var(--verde-med);
+    color: #11250A;
+    font-weight: 700;
+  }
+
+  /* Desplegables */
+  .lateral select {
+    width: 100%;
+    padding: 12px 11px;
+    border: 1px solid var(--gris-linea);
+    border-radius: 8px;
+    font-size: 16px;
+    background: var(--panel-claro);
+    color: var(--gris-texto);
+    cursor: pointer;
+  }
+  .lateral select:focus {
+    outline: 2px solid var(--verde-med);
+    border-color: var(--verde-med);
+  }
+
+  /* ----- Zona de resultados ----- */
+  .principal { flex: 1; min-width: 0; }
+
+  .encabezado {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .encabezado h1 {
+    color: var(--verde-med);
+    font-size: 30px;
+  }
+  .encabezado .fecha {
+    font-size: 15px;
+    color: var(--gris-suave);
+  }
+  .subtitulo-vista {
+    font-size: 16px;
+    color: var(--gris-suave);
+    margin-bottom: 18px;
+  }
+  .subtitulo-vista strong { color: var(--verde-med); }
+
+  /* Recuadros de indicadores */
+  .indicadores {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .indicador {
+    background: var(--panel-claro);
+    border: 1px solid var(--gris-linea);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .indicador .etiqueta {
+    font-size: 15px;
+    color: var(--verde-med);
+    margin-bottom: 8px;
+  }
+  .indicador .valor {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gris-texto);
+  }
+
+  /* Tabla */
+  .caja-tabla {
+    background: var(--panel);
+    border: 1px solid var(--gris-linea);
+    border-radius: 14px;
+    padding: 6px;
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+  }
+  thead th {
+    background: var(--verde-osc);
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 13px 12px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  thead th:first-child,
+  thead th.izq { text-align: left; }
+  tbody td {
+    padding: 12px;
+    text-align: right;
+    border-bottom: 1px solid var(--gris-linea);
+    white-space: nowrap;
+  }
+  tbody td.izq { text-align: left; }
+  tbody td.campo { color: var(--gris-suave); }
+  tbody td.destacado { font-weight: 700; color: var(--verde-med); }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr.fila-total td {
+    background: var(--panel-claro);
+    font-weight: 700;
+    color: var(--verde-med);
+    border-bottom: none;
+  }
+  .sin-datos {
+    padding: 34px;
+    text-align: center;
+    color: var(--gris-suave);
+    font-size: 16px;
+  }
+
+  /* ----- Cabecera de la empresa ----- */
+  .cabecera {
+    background: var(--verde-osc); color: #FFFFFF;
+    padding: 18px 22px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cabecera .marca { font-size: 24px; font-weight: 700; letter-spacing: 0.3px; }
+  .cabecera .btn-volver {
+    background: none; border: 1px solid rgba(255,255,255,.5);
+    color: #FFFFFF; font-size: 16px; padding: 9px 18px;
+    border-radius: 8px; cursor: pointer; text-decoration: none;
+  }
+  .cabecera .btn-volver:hover { background: rgba(255,255,255,.15); }
+
+  .migas {
+    max-width: 1200px; margin: 0 auto;
+    padding: 16px 22px 0;
+    font-size: 15px; color: var(--gris-suave);
+  }
+  .migas a { color: var(--verde-med); text-decoration: none; }
+  .migas a:hover { text-decoration: underline; }
+  .migas .sep { margin: 0 6px; color: var(--gris-linea); }
+
+  /* ----- Adaptación a celular ----- */
+  @media (max-width: 720px) {
+    .contenedor { flex-direction: column; padding: 16px; }
+    .lateral { flex: 1 1 auto; width: 100%; }
+    .indicadores { grid-template-columns: repeat(2, 1fr); }
+    .encabezado h1 { font-size: 26px; }
+    .cabecera .marca { font-size: 21px; }
+    table { font-size: 15px; }
+    .btn-campana { font-size: 17px; }
+    .lateral select { font-size: 17px; }
+    .indicador .valor { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     APLICACIÓN
+     El acceso (usuario/contraseña) se pide en la página de inicio
+     (index.html). Esta sección se abre desde ahí.
+     ============================================================ -->
+<div id="app">
+  <div class="cabecera">
+    <span class="marca">Cuatro de Mayo</span>
+    <a class="btn-volver" href="index.html">Volver al inicio</a>
+  </div>
+  <div class="migas">
+    <a href="index.html">Cuatro de Mayo</a>
+    <span class="sep">/</span>Agricultura
+    <span class="sep">/</span>Rindes
+  </div>
+  <div class="contenedor">
+
+    <!-- Barra lateral de filtros -->
+    <aside class="lateral">
+      <div class="grupo">
+        <div class="titulo-filtro">Campaña</div>
+        <div id="lista-campanas"><!-- botones generados por JS --></div>
+      </div>
+      <div class="grupo">
+        <div class="titulo-filtro">Cultivo</div>
+        <select id="sel-cultivo"></select>
+      </div>
+      <div class="grupo">
+        <div class="titulo-filtro">Lote</div>
+        <select id="sel-lote"></select>
+      </div>
+    </aside>
+
+    <!-- Zona de resultados -->
+    <main class="principal">
+      <div class="encabezado">
+        <h1>Rindes de cultivos</h1>
+        <span class="fecha" id="fecha-actualizacion"></span>
+      </div>
+      <div class="subtitulo-vista" id="subtitulo"></div>
+
+      <div class="indicadores">
+        <div class="indicador">
+          <div class="etiqueta">Hectáreas sembradas</div>
+          <div class="valor" id="ind-sem">—</div>
+        </div>
+        <div class="indicador">
+          <div class="etiqueta">Hectáreas cosechadas</div>
+          <div class="valor" id="ind-cos">—</div>
+        </div>
+        <div class="indicador">
+          <div class="etiqueta">Rinde seco / ha sembrada</div>
+          <div class="valor" id="ind-rsem">—</div>
+        </div>
+        <div class="indicador">
+          <div class="etiqueta">Rinde seco / ha cosechada</div>
+          <div class="valor" id="ind-rcos">—</div>
+        </div>
+      </div>
+
+      <div class="caja-tabla">
+        <table>
+          <thead id="tabla-cabecera"></thead>
+          <tbody id="tabla-cuerpo"></tbody>
+        </table>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script>
+/* ================================================================
+   CONFIGURACIÓN GENERAL
+   ----------------------------------------------------------------
+   Editá acá la fecha que se muestra arriba a la derecha.
+   Poné la fecha en que actualizaste los datos.
+   ================================================================ */
+var FECHA_ACTUALIZACION = "17/07/2025";
+
+
+/* ================================================================
+   DE ACÁ PARA ABAJO NO HACE FALTA TOCAR NADA
+   ================================================================ */
+
+/* El acceso se controla en la página de inicio (index.html).
+   Esta sección arranca directamente al abrirse. */
+window.addEventListener("DOMContentLoaded", function(){
+  iniciar();
+});
+
+
+/* ---------- Variables de estado ---------- */
+var DATOS = [];              // todas las filas leídas del CSV
+var campanaSeleccionada = "TODAS";
+var cultivoSeleccionado = "";
+var loteSeleccionado = "TODOS";
+
+
+/* ---------- Lectura del archivo datos.csv ---------- */
+function iniciar() {
+  document.getElementById("fecha-actualizacion").textContent =
+    "Última actualización: " + FECHA_ACTUALIZACION;
+
+  fetch("datos.csv")
+    .then(function(r){
+      if (!r.ok) throw new Error("no se pudo leer datos.csv");
+      return r.text();
+    })
+    .then(function(texto){
+      DATOS = parsearCSV(texto);
+      armarFiltros();
+      actualizarVista();
+    })
+    .catch(function(){
+      document.getElementById("tabla-cuerpo").innerHTML =
+        '<tr><td colspan="7" class="sin-datos">' +
+        'No se pudo cargar el archivo de datos (datos.csv). ' +
+        'Verificá que esté junto a esta página.</td></tr>';
+    });
+}
+
+/* Convierte el texto del CSV en una lista de objetos.
+   Columnas esperadas (fila 1):
+   Campaña, Cultivo, Campo, Lote, Has sembradas, Has cosechadas, Kg seco */
+function parsearCSV(texto) {
+  var lineas = texto.replace(/\r/g, "").split("\n");
+  var filas = [];
+  for (var i = 1; i < lineas.length; i++) {   // arranca en 1: salta encabezado
+    var linea = lineas[i].trim();
+    if (linea === "") continue;               // ignora líneas vacías
+    var c = dividirLinea(linea);
+    if (c.length < 7) continue;
+    filas.push({
+      campana: c[0].trim(),
+      cultivo: c[1].trim(),
+      campo:   c[2].trim(),
+      lote:    c[3].trim(),
+      hsem:    aNumero(c[4]),
+      hcos:    aNumero(c[5]),
+      kgseco:  aNumero(c[6])
+    });
+  }
+  return filas;
+}
+
+/* Divide una línea de CSV respetando comillas */
+function dividirLinea(linea) {
+  var res = [], actual = "", dentroComillas = false;
+  for (var i = 0; i < linea.length; i++) {
+    var ch = linea[i];
+    if (ch === '"') { dentroComillas = !dentroComillas; }
+    else if (ch === ',' && !dentroComillas) { res.push(actual); actual = ""; }
+    else { actual += ch; }
+  }
+  res.push(actual);
+  return res;
+}
+
+/* Convierte texto a número (acepta coma o punto decimal) */
+function aNumero(txt) {
+  if (txt === undefined || txt === null) return 0;
+  var n = parseFloat(String(txt).replace(/\s/g, "").replace(",", "."));
+  return isNaN(n) ? 0 : n;
+}
+
+
+/* ---------- Armado de los filtros ---------- */
+function armarFiltros() {
+  // Campañas: ordenadas, más nueva primero
+  var campanas = listaUnica(DATOS.map(function(d){ return d.campana; }));
+  campanas.sort().reverse();
+
+  var cont = document.getElementById("lista-campanas");
+  cont.innerHTML = "";
+
+  // Botón "Todas las campañas"
+  cont.appendChild(crearBotonCampana("TODAS", "Todas las campañas"));
+  campanas.forEach(function(c){
+    cont.appendChild(crearBotonCampana(c, c));
+  });
+
+  // Cultivos
+  var cultivos = listaUnica(DATOS.map(function(d){ return d.cultivo; }));
+  cultivos.sort();
+  var selC = document.getElementById("sel-cultivo");
+  selC.innerHTML = "";
+  cultivos.forEach(function(c){
+    var op = document.createElement("option");
+    op.value = c; op.textContent = c;
+    selC.appendChild(op);
+  });
+  cultivoSeleccionado = cultivos.length ? cultivos[0] : "";
+  selC.value = cultivoSeleccionado;
+  selC.addEventListener("change", function(){
+    cultivoSeleccionado = selC.value;
+    actualizarLotes();
+    actualizarVista();
+  });
+
+  // Lotes (depende de campaña + cultivo)
+  actualizarLotes();
+  document.getElementById("sel-lote").addEventListener("change", function(){
+    loteSeleccionado = this.value;
+    actualizarVista();
+  });
+}
+
+function crearBotonCampana(valor, texto) {
+  var b = document.createElement("button");
+  b.className = "btn-campana" + (valor === campanaSeleccionada ? " activo" : "");
+  b.textContent = texto;
+  b.addEventListener("click", function(){
+    campanaSeleccionada = valor;
+    // marcar el botón activo
+    var todos = document.querySelectorAll(".btn-campana");
+    todos.forEach(function(x){ x.classList.remove("activo"); });
+    b.classList.add("activo");
+    actualizarLotes();
+    actualizarVista();
+  });
+  return b;
+}
+
+/* Rellena el desplegable de lotes según campaña y cultivo elegidos */
+function actualizarLotes() {
+  var base = filtrarPorCampanaYCultivo();
+  var lotes = listaUnica(base.map(function(d){ return d.lote; }));
+  lotes.sort(function(a,b){ return a.localeCompare(b, "es", {numeric:true}); });
+
+  var sel = document.getElementById("sel-lote");
+  sel.innerHTML = "";
+  var todos = document.createElement("option");
+  todos.value = "TODOS"; todos.textContent = "Todos los lotes";
+  sel.appendChild(todos);
+  lotes.forEach(function(l){
+    var op = document.createElement("option");
+    op.value = l; op.textContent = "Lote " + l;
+    sel.appendChild(op);
+  });
+  loteSeleccionado = "TODOS";   // al cambiar campaña/cultivo, vuelve a "todos"
+  sel.value = "TODOS";
+}
+
+
+/* ---------- Filtrado ---------- */
+function filtrarPorCampanaYCultivo() {
+  return DATOS.filter(function(d){
+    var okCamp = (campanaSeleccionada === "TODAS") ||
+                 (d.campana === campanaSeleccionada);
+    var okCult = (d.cultivo === cultivoSeleccionado);
+    return okCamp && okCult;
+  });
+}
+
+function filtrarTodo() {
+  return filtrarPorCampanaYCultivo().filter(function(d){
+    return (loteSeleccionado === "TODOS") || (d.lote === loteSeleccionado);
+  });
+}
+
+
+/* ---------- Cálculos ---------- */
+/* Rinde por ha = kilos secos totales / hectáreas */
+function rinde(kg, ha) {
+  return ha > 0 ? kg / ha : 0;
+}
+
+
+/* ---------- Dibujado de la vista ---------- */
+function actualizarVista() {
+  var filas = filtrarTodo();
+  var verTodas = (campanaSeleccionada === "TODAS");
+
+  // Subtítulo
+  var txtCamp = verTodas ? "todas las campañas" : "campaña " + campanaSeleccionada;
+  document.getElementById("subtitulo").innerHTML =
+    "Mostrando <strong>" + cultivoSeleccionado + "</strong> · " + txtCamp +
+    (loteSeleccionado === "TODOS" ? "" : " · lote " + loteSeleccionado);
+
+  // Indicadores (totales del conjunto filtrado)
+  var totSem = sumar(filas, "hsem");
+  var totCos = sumar(filas, "hcos");
+  var totKg  = sumar(filas, "kgseco");
+  document.getElementById("ind-sem").textContent  = fNum(totSem, 1) + " ha";
+  document.getElementById("ind-cos").textContent  = fNum(totCos, 1) + " ha";
+  document.getElementById("ind-rsem").textContent = fNum(rinde(totKg, totSem), 0) + " kg";
+  document.getElementById("ind-rcos").textContent = fNum(rinde(totKg, totCos), 0) + " kg";
+
+  // Cabecera de la tabla (la columna Campaña aparece solo en "todas")
+  var cab = "<tr>";
+  if (verTodas) cab += '<th class="izq">Campaña</th>';
+  cab += '<th class="izq">Lote</th>' +
+         '<th class="izq">Campo</th>' +
+         '<th>Ha sem.</th>' +
+         '<th>Ha cos.</th>' +
+         '<th>Rinde seco /ha sem.</th>' +
+         '<th>Rinde seco /ha cos.</th></tr>';
+  document.getElementById("tabla-cabecera").innerHTML = cab;
+
+  // Cuerpo de la tabla
+  var cuerpo = document.getElementById("tabla-cuerpo");
+  var numCols = verTodas ? 7 : 6;
+
+  if (filas.length === 0) {
+    cuerpo.innerHTML = '<tr><td colspan="' + numCols + '" class="sin-datos">' +
+      'No hay datos para esta selección.</td></tr>';
+    return;
+  }
+
+  var html = "";
+  filas.forEach(function(d){
+    html += "<tr>";
+    if (verTodas) html += '<td class="izq campo">' + d.campana + '</td>';
+    html += '<td class="izq">' + d.lote + '</td>' +
+            '<td class="izq campo">' + d.campo + '</td>' +
+            '<td>' + fNum(d.hsem, 1) + '</td>' +
+            '<td>' + fNum(d.hcos, 1) + '</td>' +
+            '<td class="destacado">' + fNum(rinde(d.kgseco, d.hsem), 0) + ' kg</td>' +
+            '<td>' + fNum(rinde(d.kgseco, d.hcos), 0) + ' kg</td>';
+    html += "</tr>";
+  });
+
+  // Fila de total al pie
+  html += '<tr class="fila-total">';
+  if (verTodas) html += '<td class="izq">TOTAL</td><td></td><td></td>';
+  else html += '<td class="izq">TOTAL</td><td></td>';
+  html += '<td>' + fNum(totSem, 1) + '</td>' +
+          '<td>' + fNum(totCos, 1) + '</td>' +
+          '<td>' + fNum(rinde(totKg, totSem), 0) + ' kg</td>' +
+          '<td>' + fNum(rinde(totKg, totCos), 0) + ' kg</td>';
+  html += "</tr>";
+
+  cuerpo.innerHTML = html;
+}
+
+
+/* ---------- Utilidades ---------- */
+function listaUnica(arr) {
+  var vistos = {}, res = [];
+  arr.forEach(function(x){
+    if (x !== "" && !vistos[x]) { vistos[x] = true; res.push(x); }
+  });
+  return res;
+}
+
+function sumar(filas, campo) {
+  var t = 0;
+  filas.forEach(function(d){ t += d[campo]; });
+  return t;
+}
+
+/* Formatea un número con separador de miles y decimales fijos.
+   Ej: fNum(1751.4, 0) => "1.751"   |   fNum(219.5, 1) => "219,5" */
+function fNum(n, decimales) {
+  if (!isFinite(n)) n = 0;
+  return n.toLocaleString("es-AR", {
+    minimumFractionDigits: decimales,
+    maximumFractionDigits: decimales
+  });
+}
+</script>
+
+</body>
+</html>
